@@ -1,0 +1,21 @@
+#!/bin/bash
+
+EDITOR=leafpad
+
+if [ "$1" = "-i" ]; then
+	FILE=$2
+else
+	$EDITOR input_file_for_download
+	FILE=input_file_for_download
+	I=TRUE
+fi
+
+for URL in `cat $FILE`; do
+	youtube-dl $URL -l --extract-audio --audio-format mp3 &
+done
+
+echo "COMPLETE"
+
+if [ "$I" = "TRUE" ]; then
+	rm $FILE
+fi
