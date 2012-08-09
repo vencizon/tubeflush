@@ -1,7 +1,7 @@
 #!/bin/bash
 
 NAME=tubeflush
-VERSION=0.2
+VERSION=0.3
 
 USAGE="$NAME - version $VERSION\n
 \n
@@ -26,7 +26,7 @@ if [ $# -lt 1  ];then
 	exit 1
 fi
 
-while getopts " :e:i :d" opt
+while getopts ":e:i :d" opt
 do
 	case "$opt" in
 		"e")
@@ -99,9 +99,21 @@ do
 	esac
 done
 
+i=0
+
 for URL in `cat $FILE`; do
-	youtube-dl $URL -l --extract-audio --audio-format mp3 &
+	LIST[$(( i++ ))]=$URL
 done
+
+while [ $(( i-- )) -gt 2 ]; do
+	youtube-dl ${LIST[i]} -l --extract-audio --audio-format mp3 &
+done
+
+if [ $i -gt 0 ]; then
+	youtube-dl ${LIST[$(( i-- ))]} -l --extract-audio --audio-format mp3
+fi
+
+youtube-dl ${LIST[i]} -l --extract-audio --audio-format mp3
 
 if [ "$I" = "TRUE" ]; then
 	rm $FILE
