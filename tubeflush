@@ -1,21 +1,110 @@
 #!/bin/bash
 
+NAME=tubeflush
+VERSION=0.2
+
+USAGE="$NAME - version $VERSION\n
+\n
+Usage: $NAME [-e V|N|G|L] [-d] [-i] [FILE]\n
+\n
+Options:\n
+\n
+-e\t\tSelect the editor\n
+\t\tV - VIM\n
+\t\tN - NANO\n
+\t\tG - GEDIT\n
+\t\tL - LEAFPAD\n
+\n
+-d\t\tDownload from a file created on execute\n
+\n
+-i\t\tInput [FILE]\n"
+
 EDITOR=leafpad
 
-if [ "$1" = "-i" ]; then
-	FILE=$2
-else
-	$EDITOR input_file_for_download
-	FILE=input_file_for_download
-	I=TRUE
+if [ $# -lt 1  ];then
+	echo -e $USAGE
+	exit 1
 fi
+
+while getopts " :e:i :d" opt
+do
+	case "$opt" in
+		"e")
+			#inserire controllo numero parametri (come -i)
+			case "$OPTARG" in
+				"V")
+					EDITOR=vim
+					;;
+				"N")
+					EDITOR=nano
+					;;
+				"G")
+					EDITOR=gedit
+					;;
+				"L")
+					EDITOR=leafpad
+					;;
+				*)
+					echo -e "\tERROR"
+					echo -e $USAGE
+					exit 1
+					;;
+			esac
+			;;
+			
+		"i")
+			if [ $# -lt 2 ];then
+				echo "error arguments"
+				echo -e $USAGE
+				exit 1
+			elif [ $# -eq 2 ];then
+				if [ "$1" == "-i" ];then
+				       if [ "${2:0:1}" != "-" ];then
+					       FILE=$2
+				       else
+					       echo -e "\tERROR"
+					       echo -e $USAGE
+					       exit 1
+				       fi
+				fi
+			else
+				echo -e "\tERROR"
+				echo -e $USAGE
+				exit 1
+			fi
+			;;
+			
+		"d")
+			FILE=input_file_for_download
+			touch $FILE
+			$EDITOR $FILE
+			I=TRUE
+			;;
+			
+		":")
+			echo "nessun argomento"
+			exit 1
+			;;
+			
+		"?")
+			echo -e "\tERROR"
+			echo -e $USAGE
+			exit 1
+			;;
+			
+		*)
+			echo "\tERROR"
+			exit 1
+			;;
+	esac
+done
 
 for URL in `cat $FILE`; do
 	youtube-dl $URL -l --extract-audio --audio-format mp3 &
 done
 
-echo "COMPLETE"
-
 if [ "$I" = "TRUE" ]; then
 	rm $FILE
 fi
+
+exit 0
