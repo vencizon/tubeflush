@@ -5,7 +5,7 @@ VERSION=0.2
 
 USAGE="$NAME - version $VERSION\n
 \n
-Usage: $NAME [-e V|N|G|L] [-d] [-i] [FILE]\n
+Usage: $NAME [-eV|N|G|L] [-d] [-i] [FILE]\n
 \n
 Options:\n
 \n
@@ -15,7 +15,7 @@ Options:\n
 \t\tG - GEDIT\n
 \t\tL - LEAFPAD\n
 \n
--d\t\tDownload from a file created on execute\n
+-d\t\tInsert URLs to download in a new created file\n
 \n
 -i\t\tInput [FILE]\n"
 
