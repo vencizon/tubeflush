@@ -1,11 +1,11 @@
 #!/bin/bash
 
 NAME=tubeflush
-VERSION=0.3
+VERSION=develpment-version
 
 USAGE="$NAME - version $VERSION\n
 \n
-Usage: $NAME [-eV|N|G|L] [-d] [-i] [FILE]\n
+Usage: $NAME [-eV|N|G|L] [-d] [-i] [FILE] [-f] [FORMAT] [-r]\n
 \n
 Options:\n
 \n
@@ -13,20 +13,36 @@ Options:\n
 \t\tV - VIM\n
 \t\tN - NANO\n
 \t\tG - GEDIT\n
-\t\tL - LEAFPAD\n
+\t\tL - LEAFPAD [Default]\n
 \n
 -d\t\tInsert URLs to download in a new created file\n
 \n
--i\t\tInput [FILE]\n"
-
+-i\t\tInput [FILE]\n
+\n
+-f\t\tFormat:\n
+\t\taac\n
+\t\tvorbis\n
+\t\tmp3 [Default]\n
+\t\tm4a\n
+\t\topus\n
+\t\twav\n
+\n
+-r\t\tdon't remove temporary files.
+"
+FINISHDIR="$(pwd)"
+DIR="/tmp/tubeflush"
+FORMAT=mp3
 EDITOR=leafpad
+NOREMOVE=FALSE
 
 if [ $# -lt 1  ];then
 	echo -e $USAGE
 	exit 1
 fi
 
-while getopts ":e:i :d" opt
+mkdir -p "$DIR" # create working directory
+
+while getopts "e:i: d f: r" opt
 do
 	case "$opt" in
 		"e")
@@ -57,16 +73,18 @@ do
 				esac
 			fi
 			;;
+
 		
 		"i")
 			if [ $# -lt 2 ];then
 				echo "error arguments"
 				echo -e $USAGE
 				exit 1
-			elif [ $# -eq 2 ];then
+			elif [ $# -gt 2 ];then
 				if [ "$1" == "-i" ];then
 				       if [ "${2:0:1}" != "-" ];then
-					       FILE=$2
+					       cp "$2" "$DIR"/input_file_for_download
+					       FILE="$DIR"/input_file_for_download
 				       else
 					       echo -e "\tERROR"
 					       echo -e $USAGE
@@ -81,12 +99,16 @@ do
 			;;
 			
 		"d")
-			FILE=input_file_for_download
+			FILE="$DIR"/input_file_for_download
 			touch $FILE
 			$EDITOR $FILE
-			I=TRUE
 			;;
-			
+		"f")
+			FORMAT=$OPTARG
+			;;
+		"r")	
+			NOREMOVE=TRUE
+			;;
 		":")
 			echo "no argument."
 			exit 1
@@ -105,24 +127,29 @@ do
 	esac
 done
 
-i=0
-
+cd "$DIR"
+URLNUMBER=0
 for URL in `cat $FILE`; do
-	LIST[$(( i++ ))]=$URL
+	((URLNUMBER++))	
+	LIST[$URLNUMBER]=$URL	# LIST[i] is an array that contains all link found in $FILE
 done
-
-while [ $(( i-- )) -gt 2 ]; do
-	youtube-dl ${LIST[i]} -l --extract-audio --audio-format mp3 &
-done
-
-if [ $i -gt 0 ]; then
-	youtube-dl ${LIST[$(( i-- ))]} -l --extract-audio --audio-format mp3
+_num="$(cat $FILE | wc -w)" # count number of link
+if [ $_num -eq 0 ]; then	# if there aren't link, exit 1 and 
+	echo "No link found..."
+	echo -e $USAGE
+	exit 1
+else
+	for (( i = 1; i<= "$URLNUMBER"; i++ )); do
+		youtube-dl "${LIST[i]}" -l --extract-audio --audio-format $FORMAT 
+		if [ "$FORMAT" = "vorbis" ]; then
+			mv "$DIR"/*.ogg "$FINISHDIR"/
+		else
+			mv "$DIR"/*."$FORMAT" "$FINISHDIR"
+		fi
+	done
 fi
-
-youtube-dl ${LIST[i]} -l --extract-audio --audio-format mp3
-
-if [ "$I" = "TRUE" ]; then
-	rm $FILE
+if [ "$NOREMOVE" = "FALSE" ]; then
+	rm -rf $DIR
 fi
-
+cd
 exit 0
