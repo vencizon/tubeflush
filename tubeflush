@@ -30,28 +30,34 @@ while getopts ":e:i :d" opt
 do
 	case "$opt" in
 		"e")
-			#inserire controllo numero parametri (come -i)
-			case "$OPTARG" in
-				"V")
-					EDITOR=vim
-					;;
-				"N")
-					EDITOR=nano
-					;;
-				"G")
-					EDITOR=gedit
-					;;
-				"L")
-					EDITOR=leafpad
-					;;
-				*)
-					echo -e "\tERROR"
-					echo -e $USAGE
-					exit 1
-					;;
-			esac
+			if [ "${#OPTARG}" != "1" ]; then	
+				echo "You can choose only one text editor."
+				echo 
+				echo -e $USAGE
+				exit 1
+			else
+				case "$OPTARG" in
+					"V")
+						EDITOR=vim
+						;;
+					"N")
+						EDITOR=nano
+						;;
+					"G")
+						EDITOR=gedit
+						;;
+					"L")
+						EDITOR=leafpad
+						;;
+					*)
+						echo -e "\tERROR"
+						echo -e $USAGE
+						exit 1
+						;;
+				esac
+			fi
 			;;
-			
+		
 		"i")
 			if [ $# -lt 2 ];then
 				echo "error arguments"
@@ -82,7 +88,7 @@ do
 			;;
 			
 		":")
-			echo "nessun argomento"
+			echo "no argument."
 			exit 1
 			;;
 			
