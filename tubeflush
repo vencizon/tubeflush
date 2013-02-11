@@ -39,9 +39,9 @@ if [ $# -lt 1  ];then
 	echo -e $USAGE
 	exit 1
 fi
-
-mkdir -p "$DIR" # create working directory
-
+if [ ! -d "$DIR"  ]; then
+	mkdir -p "$DIR" # create working directory
+fi
 while getopts "e:i: d f: r" opt
 do
 	case "$opt" in
