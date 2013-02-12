@@ -140,7 +140,7 @@ if [ $_num -eq 0 ]; then	# if there aren't link, exit 1 and
 	exit 1
 else
 	for (( i = 1; i<= "$URLNUMBER"; i++ )); do
-		youtube-dl "${LIST[i]}" -l --extract-audio --audio-format $FORMAT 
+		youtube-dl "${LIST[i]}" --title --continue --no-overwrites --extract-audio --audio-format $FORMAT 
 		if [ "$FORMAT" = "vorbis" ]; then
 			mv "$DIR"/*.ogg "$FINISHDIR"/
 		else
