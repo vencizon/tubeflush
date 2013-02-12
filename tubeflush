@@ -5,7 +5,7 @@ VERSION=develpment-version
 
 USAGE="$NAME - version $VERSION\n
 \n
-Usage: $NAME [-eV|N|G|L] [-d] [-i] [FILE] [-f] [FORMAT] [-r]\n
+Usage: $NAME [-eV|N|G|L] [-d] [-i] [FILE] [-f] [FORMAT] [-r] [-n] [DIRECTORY]\n
 \n
 Options:\n
 \n
@@ -27,6 +27,8 @@ Options:\n
 \t\topus\n
 \t\twav\n
 \n
+-n\t\tdirectory where you want to save file.
+\n
 -r\t\tdon't remove temporary files.
 "
 FINISHDIR="$(pwd)"
@@ -42,7 +44,7 @@ fi
 if [ ! -d "$DIR"  ]; then
 	mkdir -p "$DIR" # create working directory
 fi
-while getopts "e:i: d f: r" opt
+while getopts "e:i: d f: r n:" opt
 do
 	case "$opt" in
 		"e")
@@ -53,16 +55,16 @@ do
 				exit 1
 			else
 				case "$OPTARG" in
-					"V")
+					'V'|'v')
 						EDITOR=vim
 						;;
-					"N")
+					'N'|'n')
 						EDITOR=nano
 						;;
-					"G")
+					'G'|'g')
 						EDITOR=gedit
 						;;
-					"L")
+					'L'|'l')
 						EDITOR=leafpad
 						;;
 					*)
@@ -74,7 +76,9 @@ do
 			fi
 			;;
 
-		
+		"n")
+			FINISHDIR=$OPTARG
+			;;
 		"i")
 			if [ $# -lt 2 ];then
 				echo "error arguments"
@@ -126,6 +130,11 @@ do
 			;;
 	esac
 done
+
+if [ ! -d "$FINISHDIR" ]; then	# check if directory exist
+	echo -e "$FINISHDIR doesn't exists. Create now..."
+	mkdir -p "$FINISHDIR"
+fi
 
 cd "$DIR"
 URLNUMBER=0
