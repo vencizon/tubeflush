@@ -1,11 +1,11 @@
 #!/bin/bash
 
 NAME=tubeflush
-VERSION=develpment-version
+VERSION=development-version
 
 USAGE="$NAME - version $VERSION\n
 \n
-Usage: $NAME [-eV|N|G|L] [-d] [-i] [FILE] [-f] [FORMAT] [-r] [-n] [DIRECTORY]\n
+Usage: $NAME [-eV|N|G|L] [-d|-s|-i] [FILE] [-f] [FORMAT] [-r] [-n] [DIRECTORY]\n
 \n
 Options:\n
 \n
@@ -16,6 +16,8 @@ Options:\n
 \t\tL - LEAFPAD [Default]\n
 \n
 -d\t\tInsert URLs to download in a new created file\n
+\n
+-s\t\tSearch on YouTube\n
 \n
 -i\t\tInput [FILE]\n
 \n
@@ -48,22 +50,24 @@ fi
 
 ## FUNCTION ##
 function search {
+	rm "$DIR"/temp 2>/dev/null
 	SEARCH1="https://gdata.youtube.com/feeds/api/videos?q="
 	for (( i = 1; i <= 10; i++ )); do
 		SEARCH2="&orderby=published&start-index="$i"&max-results=1&v=2&alt=json"
 		rpc="$(curl -s "$SEARCH1""$1""$SEARCH2")"
 		file[i]="$(echo $rpc | jshon -e feed -e entry -a -e title -e '$t' -u -p -p -e id -e '$t' -u n )" 
-		echo ${file[i]}  >> /tmp/youtube
+		echo ${file[i]}  >> "$DIR"/temp
 	done	
 	for (( i = 1; i <= 10; i++ )); do
-		stamp[i]="$(cat /tmp/youtube | head -"$i" | tail -1 | rev | cut -d " " -f2- | rev)"
+		stamp[i]="$(cat "$DIR"/temp | head -"$i" | tail -1 | rev | cut -d " " -f2- | rev)"
 		echo "$i) ${stamp[i]}"
 	done
 	echo "Select number:"
 	read __N
 	echo "Download of: ${stamp[__N]}"
-	id="$(cat /tmp/youtube | head -"$__N" | tail -1 | rev | cut -d: -f1 | rev)"
+	id="$(cat "$DIR"/temp | head -"$__N" | tail -1 | rev | cut -d: -f1 | rev)"
 	echo https://www.youtube.com/watch?v=$id >> "$DIR"/list 
+
 }
 
 while getopts "e:i: d f: r n: s:" opt
@@ -176,9 +180,9 @@ else
 	for (( i = 1; i<= "$URLNUMBER"; i++ )); do
 		youtube-dl "${LIST[i]}" --title --continue --no-overwrites --extract-audio --audio-format $FORMAT 
 		if [ "$FORMAT" = "vorbis" ]; then
-			mv "$DIR"/*.ogg "$FINISHDIR"/
+			mv "$DIR"/*.ogg "$FINISHDIR"/ || exit 1
 		else
-			mv "$DIR"/*."$FORMAT" "$FINISHDIR"
+			mv "$DIR"/*."$FORMAT" "$FINISHDIR" || exit 1
 		fi
 	done
 fi
