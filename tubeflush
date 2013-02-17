@@ -50,22 +50,23 @@ fi
 
 ## FUNCTION ##
 function search {
-	rm "$DIR"/temp 2>/dev/null
+#	rm "$DIR"/temp 2>/dev/null
 	SEARCH1="https://gdata.youtube.com/feeds/api/videos?q="
 	for (( i = 1; i <= 10; i++ )); do
 		SEARCH2="&orderby=published&start-index="$i"&max-results=1&v=2&alt=json"
 		rpc="$(curl -s "$SEARCH1""$1""$SEARCH2")"
-		file[i]="$(echo $rpc | jshon -e feed -e entry -a -e title -e '$t' -u -p -p -e id -e '$t' -u n )" 
-		echo ${file[i]}  >> "$DIR"/temp
+		title[i]="$(echo $rpc | jshon -e feed -e entry -a -e title -e '$t' -u )" 
+		link[i]="$(echo $rpc | jshon -e feed -e entry -a  -e id -e '$t' -u )"
+		desc[i]="$(echo $rpc | jshon -e feed -e entry -a -e 'media$group' -e 'media$description' -e '$t' -u )"
 	done	
 	for (( i = 1; i <= 10; i++ )); do
-		stamp[i]="$(cat "$DIR"/temp | head -"$i" | tail -1 | rev | cut -d " " -f2- | rev)"
-		echo "$i) ${stamp[i]}"
+#		stamp[i]="$(cat "$DIR"/temp | head -"$i" | tail -1 | rev | cut -d " " -f2- | rev)"
+		echo -e "$i) \e[0;0m \033[1m ${title[i]}\n	\e[0;0m${desc[i]} \n"
 	done
 	echo "Select number:"
 	read __N
-	echo "Download of: ${stamp[__N]}"
-	id="$(cat "$DIR"/temp | head -"$__N" | tail -1 | rev | cut -d: -f1 | rev)"
+	echo "Download of: ${title[__N]}"
+	id="$(echo ${link[__N]} | rev | cut -d: -f1 | rev)"
 	echo https://www.youtube.com/watch?v=$id >> "$DIR"/list 
 
 }
