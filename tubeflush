@@ -44,7 +44,29 @@ fi
 if [ ! -d "$DIR"  ]; then
 	mkdir -p "$DIR" # create working directory
 fi
-while getopts "e:i: d f: r n:" opt
+
+
+## FUNCTION ##
+function search {
+	SEARCH1="https://gdata.youtube.com/feeds/api/videos?q="
+	for (( i = 1; i <= 10; i++ )); do
+		SEARCH2="&orderby=published&start-index="$i"&max-results=1&v=2&alt=json"
+		rpc="$(curl -s "$SEARCH1""$1""$SEARCH2")"
+		file[i]="$(echo $rpc | jshon -e feed -e entry -a -e title -e '$t' -u -p -p -e id -e '$t' -u n )" 
+		echo ${file[i]}  >> /tmp/youtube
+	done	
+	for (( i = 1; i <= 10; i++ )); do
+		stamp[i]="$(cat /tmp/youtube | head -"$i" | tail -1 | rev | cut -d " " -f2- | rev)"
+		echo "$i) ${stamp[i]}"
+	done
+	echo "Select number:"
+	read __N
+	echo "Download of: ${stamp[__N]}"
+	id="$(cat /tmp/youtube | head -"$__N" | tail -1 | rev | cut -d: -f1 | rev)"
+	echo https://www.youtube.com/watch?v=$id >> "$DIR"/list 
+}
+
+while getopts "e:i: d f: r n: s:" opt
 do
 	case "$opt" in
 		"e")
@@ -113,11 +135,14 @@ do
 		"r")	
 			NOREMOVE=TRUE
 			;;
+		"s")
+			search $OPTARG
+			FILE="$DIR"/list
+			;;
 		":")
 			echo "no argument."
 			exit 1
 			;;
-			
 		"?")
 			echo -e "\tERROR"
 			echo -e $USAGE
