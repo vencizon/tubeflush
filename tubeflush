@@ -47,12 +47,12 @@ if [ ! -d "$DIR"  ]; then
 	mkdir -p "$DIR" # create working directory
 fi
 
-
 ## FUNCTION ##
 function search {
 	rm "$DIR"/temp 2>/dev/null
 	SEARCH1="https://gdata.youtube.com/feeds/api/videos?q="
-	for (( i = 1; i <= 10; i++ )); do
+	max=10
+	for (( i = 1; i <= "$max"; i++ )); do
 		SEARCH2="&orderby=published&start-index="$i"&max-results=1&v=2&alt=json"
 		rpc="$(curl -s "$SEARCH1""$1""$SEARCH2")"
 		if [ "$rpc" = "$NULL" ]; then
@@ -60,16 +60,19 @@ function search {
 			exit 1
 		fi
 		total="$(echo $rpc | jshon -e feed -e 'openSearch$totalResults' -e '$t')"
-		if [ "$total" = "0" ]; then
+		if (( "$total" == "0" )); then
 			echo " No matches found on Youtube..."
 			exit 1
-		else
+		else			
 			title[i]="$(echo $rpc | jshon -e feed -e entry -a -e title -e '$t' -u )" 
 			link[i]="$(echo $rpc | jshon -e feed -e entry -a  -e id -e '$t' -u )"
 			desc[i]="$(echo $rpc | jshon -e feed -e entry -a -e 'media$group' -e 'media$description' -e '$t' -u )"
 		fi
-	done	
-	for (( i = 1; i <= 10; i++ )); do
+		if (( "$total" < "20" )); then
+			max=$total		
+		fi		
+		done	
+	for (( i = 1; i <= "$max"; i++ )); do
 		echo -e "$i) \e[0;0m \033[1m ${title[i]}\n	\e[0;0m${desc[i]} \n"
 	done
 	echo "Select number:"
