@@ -50,17 +50,26 @@ fi
 
 ## FUNCTION ##
 function search {
-#	rm "$DIR"/temp 2>/dev/null
+	rm "$DIR"/temp 2>/dev/null
 	SEARCH1="https://gdata.youtube.com/feeds/api/videos?q="
 	for (( i = 1; i <= 10; i++ )); do
 		SEARCH2="&orderby=published&start-index="$i"&max-results=1&v=2&alt=json"
 		rpc="$(curl -s "$SEARCH1""$1""$SEARCH2")"
-		title[i]="$(echo $rpc | jshon -e feed -e entry -a -e title -e '$t' -u )" 
-		link[i]="$(echo $rpc | jshon -e feed -e entry -a  -e id -e '$t' -u )"
-		desc[i]="$(echo $rpc | jshon -e feed -e entry -a -e 'media$group' -e 'media$description' -e '$t' -u )"
+		if [ "$rpc" = "$NULL" ]; then
+			echo " 404 Not Found."
+			exit 1
+		fi
+		total="$(echo $rpc | jshon -e feed -e 'openSearch$totalResults' -e '$t')"
+		if [ "$total" = "0" ]; then
+			echo " No matches found on Youtube..."
+			exit 1
+		else
+			title[i]="$(echo $rpc | jshon -e feed -e entry -a -e title -e '$t' -u )" 
+			link[i]="$(echo $rpc | jshon -e feed -e entry -a  -e id -e '$t' -u )"
+			desc[i]="$(echo $rpc | jshon -e feed -e entry -a -e 'media$group' -e 'media$description' -e '$t' -u )"
+		fi
 	done	
 	for (( i = 1; i <= 10; i++ )); do
-#		stamp[i]="$(cat "$DIR"/temp | head -"$i" | tail -1 | rev | cut -d " " -f2- | rev)"
 		echo -e "$i) \e[0;0m \033[1m ${title[i]}\n	\e[0;0m${desc[i]} \n"
 	done
 	echo "Select number:"
@@ -80,10 +89,8 @@ function view {
 		desc[i]="$(echo $rpc | jshon -e feed -e entry -a -e 'media$group' -e 'media$description' -e '$t' -u )"
 	done	
 	for (( i = 1; i <= 10; i++ )); do
-#		stamp[i]="$(cat "$DIR"/temp | head -"$i" | tail -1 | rev | cut -d " " -f2- | rev)"
 		echo -e "$i) \e[0;0m \033[1m ${title[i]}\n	\e[0;0m${desc[i]} \n"
 	done
-
 	echo "Select number:"
 	read __N
 	echo "resolving link for: ${title[__N]}"
