@@ -76,16 +76,20 @@ function search {	# This function search on youtube using API v.2.0. Require "js
 		fi		
 		done	
 	for (( i = 1; i <= "$max"; i++ )); do
-		echo -e "$i) \e[0;0m \033[1m ${title[i]}\n	\e[0;0m${desc[i]} \n"	# output all matches
+		echo -e "$i) \e[0;0m \033[1m ${title[i]}\n	\e[0;0m${desc[i]} \n"	# output $max matches
 	done
 	echo "Select number (0 for exit):"		# select $__N
 	read __N
+	while (( "$__N" > "$max" )); do
+		echo "Please type number smaller than $max: "
+		read __N
+	done
 	if [ "$__N" = "$NULL" ] || [ "$__N" = "0" ]; then
 		exit 0
 	else
 		echo "Download of: ${title[__N]}"
-		id="$(echo ${link[__N]} | rev | cut -d: -f1 | rev)" # clean video ID
-		echo https://www.youtube.com/watch?v="$id" >> "$DIR"/list # NOW, "$DIR"/list in $FILE
+		id="$(echo ${link[__N]} | rev | cut -d: -f1 | rev)"			# clean video ID
+		echo https://www.youtube.com/watch?v="$id" >> "$DIR"/list	# NOW, "$DIR"/list in $FILE
 	fi
 }
 
@@ -117,6 +121,13 @@ function view {
 	done
 	echo "Select number:"		# select $__N
 	read __N
+	while (( "$__N" > "$max" )); do
+		echo "Please type number smaller than $max (0 for exit): "
+		read __N
+		if [ "$__N" = "$NULL" ]; then
+		exit 0
+		fi
+	done
 	if [ "$__N" = "$NULL" ] || [ "$__N" = "0" ]; then
 		exit 0
 	else
@@ -160,7 +171,6 @@ do
 				esac
 			fi
 			;;
-
 		"n")					# set a finish directory != pwd
 			FINISHDIR=$OPTARG
 			;;
@@ -240,7 +250,7 @@ if [ $_num -eq 0 ]; then	# if there aren't link, exit 1
 	exit 1
 else
 	for (( i = 1; i<= "$URLNUMBER"; i++ )); do
-		youtube-dl "${LIST[i]}" --title --continue --no-overwrites --extract-audio --audio-format $FORMAT 
+		youtube-dl "${LIST[i]}" --title --continue --no-overwrites --extract-audio --audio-format $FORMAT || exit 1
 		if [ "$FORMAT" = "vorbis" ]; then
 			mv "$DIR"/*.ogg "$FINISHDIR"/ || exit 1
 		else
