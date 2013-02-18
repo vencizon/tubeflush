@@ -39,68 +39,88 @@ FORMAT=mp3
 EDITOR=leafpad
 NOREMOVE=FALSE
 
-if [ $# -lt 1  ];then
-	echo -e $USAGE
+if [ $# -lt 1  ];then	# if there are not arguments on command line
+	echo -e $USAGE	#+print $USAGE and exit 1.
 	exit 1
 fi
 if [ ! -d "$DIR"  ]; then
-	mkdir -p "$DIR" # create working directory
+	mkdir -p "$DIR" # create working directory if it doesn't exist.
 fi
 
 ## FUNCTION ##
 function search {
-	rm "$DIR"/temp 2>/dev/null
 	SEARCH1="https://gdata.youtube.com/feeds/api/videos?q="
-	max=10
+	max=10  # Max is 10, if $total will be lighter than 20, max = $total, else max remains 10. Max represent the number of video that tubeflush print
 	for (( i = 1; i <= "$max"; i++ )); do
 		SEARCH2="&orderby=published&start-index="$i"&max-results=1&v=2&alt=json"
-		rpc="$(curl -s "$SEARCH1""$1""$SEARCH2")"
-		if [ "$rpc" = "$NULL" ]; then
+		rpc="$(curl -s "$SEARCH1""$1""$SEARCH2")"	
+		if [ "$rpc" = "$NULL" ]; then			# il rpc is empty, exit 1 (no connection)
 			echo " 404 Not Found."
 			exit 1
 		fi
-		total="$(echo $rpc | jshon -e feed -e 'openSearch$totalResults' -e '$t')"
-		if (( "$total" == "0" )); then
-			echo " No matches found on Youtube..."
+		total="$(echo $rpc | jshon -e feed -e 'openSearch$totalResults' -e '$t')" # total il the number of matches
+		if (( "$total" == "0" )); then						  # if total is 0, it means that on yt there aren't matches
+			echo " No matches found on Youtube..."				  
 			exit 1
 		else			
-			title[i]="$(echo $rpc | jshon -e feed -e entry -a -e title -e '$t' -u )" 
-			link[i]="$(echo $rpc | jshon -e feed -e entry -a  -e id -e '$t' -u )"
-			desc[i]="$(echo $rpc | jshon -e feed -e entry -a -e 'media$group' -e 'media$description' -e '$t' -u )"
+			title[i]="$(echo $rpc | jshon -e feed -e entry -a -e title -e '$t' -u )"	# video title
+			link[i]="$(echo $rpc | jshon -e feed -e entry -a  -e id -e '$t' -u )"		# video ID
+			desc[i]="$(echo $rpc | jshon -e feed -e entry -a -e 'media$group' -e 'media$description' -e '$t' -u )"	# video description  
 		fi
-		if (( "$total" < "20" )); then
+		if (( "$total" < "20" )); then	# if there are less than 20 matches, max = $total
 			max=$total		
 		fi		
 		done	
 	for (( i = 1; i <= "$max"; i++ )); do
-		echo -e "$i) \e[0;0m \033[1m ${title[i]}\n	\e[0;0m${desc[i]} \n"
+		echo -e "$i) \e[0;0m \033[1m ${title[i]}\n	\e[0;0m${desc[i]} \n"	# output all matches
 	done
-	echo "Select number:"
+	echo "Select number (0 for exit):"		# select $__N
 	read __N
-	echo "Download of: ${title[__N]}"
-	id="$(echo ${link[__N]} | rev | cut -d: -f1 | rev)"
-	echo https://www.youtube.com/watch?v=$id >> "$DIR"/list 
+	if [ "$__N" = "$NULL" ] || [ "$__N" = "0" ]; then
+		exit 0
+	else
+		echo "Download of: ${title[__N]}"
+		id="$(echo ${link[__N]} | rev | cut -d: -f1 | rev)" # clean video ID
+		echo https://www.youtube.com/watch?v="$id" >> "$DIR"/list # NOW, "$DIR"/list in $FILE
+	fi
 }
 
 function view {
 	SEARCH1="https://gdata.youtube.com/feeds/api/videos?q="
-	for (( i = 1; i <= 10; i++ )); do
+	max=10  # Max is 10, if $total will be lighter than 20, max = $total, else max remains 10. Max represent the number of video that tubeflush print
+	for (( i = 1; i <= "$max"; i++ )); do
 		SEARCH2="&orderby=published&start-index="$i"&max-results=1&v=2&alt=json"
-		rpc="$(curl -s "$SEARCH1""$1""$SEARCH2")"
-		title[i]="$(echo $rpc | jshon -e feed -e entry -a -e title -e '$t' -u )" 
-		link[i]="$(echo $rpc | jshon -e feed -e entry -a  -e id -e '$t' -u )"
-		desc[i]="$(echo $rpc | jshon -e feed -e entry -a -e 'media$group' -e 'media$description' -e '$t' -u )"
-	done	
-	for (( i = 1; i <= 10; i++ )); do
-		echo -e "$i) \e[0;0m \033[1m ${title[i]}\n	\e[0;0m${desc[i]} \n"
+		rpc="$(curl -s "$SEARCH1""$1""$SEARCH2")"	
+		if [ "$rpc" = "$NULL" ]; then			# il rpc is empty, exit 1 (no connection)
+			echo " 404 Not Found."
+			exit 1
+		fi
+		total="$(echo $rpc | jshon -e feed -e 'openSearch$totalResults' -e '$t')" # total il the number of matches
+		if (( "$total" == "0" )); then						  # if total is 0, it means that on yt there aren't matches
+			echo " No matches found on Youtube..."				  
+			exit 1
+		else			
+			title[i]="$(echo $rpc | jshon -e feed -e entry -a -e title -e '$t' -u )"	# video title
+			link[i]="$(echo $rpc | jshon -e feed -e entry -a  -e id -e '$t' -u )"		# video ID
+			desc[i]="$(echo $rpc | jshon -e feed -e entry -a -e 'media$group' -e 'media$description' -e '$t' -u )"	# video description  
+		fi
+		if (( "$total" < "20" )); then	# if there are less than 20 matches, max = $total
+			max=$total		
+		fi		
+		done	
+	for (( i = 1; i <= "$max"; i++ )); do
+		echo -e "$i) \e[0;0m \033[1m ${title[i]}\n	\e[0;0m${desc[i]} \n"	# output all matches
 	done
-	echo "Select number:"
+	echo "Select number:"		# select $__N
 	read __N
-	echo "resolving link for: ${title[__N]}"
-	id="$(echo ${link[__N]} | rev | cut -d: -f1 | rev)"
-	video="https://www.youtube.com/watch?v="$id""
-
-	mplayer $video >/dev/null 2>&1
+	if [ "$__N" = "$NULL" ] || [ "$__N" = "0" ]; then
+		exit 0
+	else
+		echo "Resolving link for: ${title[__N]}"
+		id="$(echo ${link[__N]} | rev | cut -d: -f1 | rev)" # clean video ID
+		video="https://www.youtube.com/watch?v="$id""
+		mplayer $video >/dev/null 2>&1
+	fi
 	exit 0
 }
 
