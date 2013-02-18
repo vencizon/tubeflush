@@ -19,6 +19,10 @@ Options:\n
 \n
 -s\t\tSearch on YouTube\n
 \n
+-v\t\tView video result in streaming.\n
+\n
+-va\t\tStreaming audio (no video).
+\n
 -i\t\tInput [FILE]\n
 \n
 -f\t\tFormat:\n
@@ -33,11 +37,11 @@ Options:\n
 \n
 -r\t\tdon't remove temporary files.
 "
-FINISHDIR="$(pwd)"
-DIR="/tmp/tubeflush"
-FORMAT=mp3
-EDITOR=leafpad
-NOREMOVE=FALSE
+FINISHDIR="$(pwd)"	# set finishdir in the directory where tubeflush is launched
+DIR="/tmp/tubeflush"	# Working directory
+FORMAT=mp3		# set default output format
+EDITOR=leafpad	# set default text editor
+NOREMOVE=FALSE	
 
 if [ $# -lt 1  ];then	# if there are not arguments on command line
 	echo -e $USAGE	#+print $USAGE and exit 1.
@@ -48,7 +52,7 @@ if [ ! -d "$DIR"  ]; then
 fi
 
 ## FUNCTION ##
-function search {
+function search {	# This function search on youtube using API v.2.0. Require "jshon" and "curl".
 	SEARCH1="https://gdata.youtube.com/feeds/api/videos?q="
 	max=10  # Max is 10, if $total will be lighter than 20, max = $total, else max remains 10. Max represent the number of video that tubeflush print
 	for (( i = 1; i <= "$max"; i++ )); do
@@ -123,18 +127,19 @@ function view {
 	fi
 	exit 0
 }
+## END FUNCTION ##
 
-while getopts "e:i: d f: r n: s: v:" opt
+while getopts "e:i: d f: r n:s:v: m:" opt	# Parsing command line
 do
 	case "$opt" in
 		"e")
-			if [ "${#OPTARG}" != "1" ]; then	
-				echo "You can choose only one text editor."
-				echo 
+			if [ "${#OPTARG}" != "1" ]; then	# ${#OPTARG} is the number of optarg.
+				echo "You can choose only one text editor." #+ if there is not only one argument on switch -e
+				echo 										#+ exit with error because user can uso only one text editor
 				echo -e $USAGE
 				exit 1
 			else
-				case "$OPTARG" in
+				case "$OPTARG" in		# set text editor. if -e doesn't exist, Leafpad is default.
 					'V'|'v')
 						EDITOR=vim
 						;;
@@ -148,7 +153,7 @@ do
 						EDITOR=leafpad
 						;;
 					*)
-						echo -e "\tERROR"
+						echo -e "\tERROR" 
 						echo -e $USAGE
 						exit 1
 						;;
@@ -156,11 +161,11 @@ do
 			fi
 			;;
 
-		"n")
+		"n")					# set a finish directory != pwd
 			FINISHDIR=$OPTARG
 			;;
 		"v")
-			view $OPTARG
+			view $OPTARG	# $OPTARG is the string that user want to search on Youtube
 			;;
 		"i")
 			if [ $# -lt 2 ];then
@@ -229,7 +234,7 @@ for URL in `cat $FILE`; do
 	LIST[$URLNUMBER]=$URL	# LIST[i] is an array that contains all link found in $FILE
 done
 _num="$(cat $FILE | wc -w)" # count number of link
-if [ $_num -eq 0 ]; then	# if there aren't link, exit 1 and 
+if [ $_num -eq 0 ]; then	# if there aren't link, exit 1 
 	echo "No link found..."
 	echo -e $USAGE
 	exit 1
