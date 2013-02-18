@@ -19,9 +19,9 @@ Options:\n
 \n
 -s\t\tSearch on YouTube\n
 \n
--v\t\tView video result in streaming.\n
+-v\t\tView video result in streaming;\n
 \n
--va\t\tStreaming audio (no video).
+-m\t\tStreaming audio (no video);\n
 \n
 -i\t\tInput [FILE]\n
 \n
@@ -33,9 +33,12 @@ Options:\n
 \t\topus\n
 \t\twav\n
 \n
--n\t\tdirectory where you want to save file.
+-n\t\tdirectory where you want to save file;
 \n
--r\t\tdon't remove temporary files.
+-r\t\tdon't remove temporary files;\n
+\n
+-h\t\tprint this help and exit.
+\n
 "
 FINISHDIR="$(pwd)"	# set finishdir in the directory where tubeflush is launched
 DIR="/tmp/tubeflush"	# Working directory
@@ -43,7 +46,7 @@ FORMAT=mp3		# set default output format
 EDITOR=leafpad	# set default text editor
 NOREMOVE=FALSE	
 
-if [ $# -lt 1  ];then	# if there are not arguments on command line
+if [ $# -lt 1 ];then	# if there are not arguments on command line
 	echo -e $USAGE	#+print $USAGE and exit 1.
 	exit 1
 fi
@@ -83,6 +86,9 @@ function search {	# This function search on youtube using API v.2.0. Require "js
 	while (( "$__N" > "$max" )); do
 		echo "Please type number smaller than $max: "
 		read __N
+		if [ "$__N" = "$NULL" ]; then
+			exit 0
+		fi
 	done
 	if [ "$__N" = "$NULL" ] || [ "$__N" = "0" ]; then
 		exit 0
@@ -124,8 +130,8 @@ function view {
 	while (( "$__N" > "$max" )); do
 		echo "Please type number smaller than $max (0 for exit): "
 		read __N
-		if [ "$__N" = "$NULL" ]; then
-		exit 0
+		if [ "$__N" = "$NULL" ]; then 
+			exit 0
 		fi
 	done
 	if [ "$__N" = "$NULL" ] || [ "$__N" = "0" ]; then
@@ -134,13 +140,13 @@ function view {
 		echo "Resolving link for: ${title[__N]}"
 		id="$(echo ${link[__N]} | rev | cut -d: -f1 | rev)" # clean video ID
 		video="https://www.youtube.com/watch?v="$id""
-		mplayer $video >/dev/null 2>&1
+		mplayer $video $2 >/dev/null 2>&1
 	fi
 	exit 0
 }
 ## END FUNCTION ##
 
-while getopts "e:i: d f: r n:s:v: m:" opt	# Parsing command line
+while getopts "e:i: d f: r n:s:v:h: m:" opt	# Parsing command line
 do
 	case "$opt" in
 		"e")
@@ -176,6 +182,9 @@ do
 			;;
 		"v")
 			view $OPTARG	# $OPTARG is the string that user want to search on Youtube
+			;;
+		"m")
+			view $OPTARG --novideo # no video from youtube, only music...
 			;;
 		"i")
 			if [ $# -lt 2 ];then
@@ -214,6 +223,10 @@ do
 		"s")
 			search $OPTARG
 			FILE="$DIR"/list
+			;;
+		"h")
+			echo -e $USAGE
+			exit 0
 			;;
 		":")
 			echo "no argument."
