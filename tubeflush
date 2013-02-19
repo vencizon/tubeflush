@@ -46,13 +46,8 @@ FORMAT=mp3		# set default output format
 EDITOR=leafpad	# set default text editor
 NOREMOVE=FALSE	
 
-if [ $# -lt 1 ];then	# if there are not arguments on command line
-	echo -e $USAGE	#+print $USAGE and exit 1.
-	exit 1
-fi
-if [ ! -d "$DIR"  ]; then
-	mkdir -p "$DIR" # create working directory if it doesn't exist.
-fi
+[[ $# -eq 0 ]] && echo -e $USAGE && exit 1	# if there are not arguments on command line
+[[ -d "$DIR" ]] || mkdir -p "$DIR"			# create working directory if it doesn't exist.
 
 ## FUNCTION ##
 function search {	# This function search on youtube using API v.2.0. Require "jshon" and "curl".
@@ -61,10 +56,7 @@ function search {	# This function search on youtube using API v.2.0. Require "js
 	for (( i = 1; i <= "$max"; i++ )); do
 		SEARCH2="&orderby=published&start-index="$i"&max-results=1&v=2&alt=json"
 		rpc="$(curl -s "$SEARCH1""$1""$SEARCH2")"	
-		if [ "$rpc" = "$NULL" ]; then			# il rpc is empty, exit 1 (no connection)
-			echo " 404 Not Found."
-			exit 1
-		fi
+		[[ "$rpc" = "$NULL" ]] && echo " 404 Not Found." && exit 1	# if rpc is void, your pc is off line. Turn on yout modem :P
 		total="$(echo $rpc | jshon -e feed -e 'openSearch$totalResults' -e '$t')" # total il the number of matches
 		if (( "$total" == "0" )); then						  # if total is 0, it means that on yt there aren't matches
 			echo " No matches found on Youtube..."				  
@@ -74,9 +66,7 @@ function search {	# This function search on youtube using API v.2.0. Require "js
 			link[i]="$(echo $rpc | jshon -e feed -e entry -a  -e id -e '$t' -u )"		# video ID
 			desc[i]="$(echo $rpc | jshon -e feed -e entry -a -e 'media$group' -e 'media$description' -e '$t' -u )"	# video description  
 		fi
-		if (( "$total" < "20" )); then	# if there are less than 20 matches, max = $total
-			max=$total		
-		fi		
+		[[ "$total" -lt "20" ]] && max=$total	# if there are less than 20 matches, max = $total
 		done	
 	for (( i = 1; i <= "$max"; i++ )); do
 		echo -e "$i) \e[0;0m \033[1m ${title[i]}\n	\e[0;0m${desc[i]} \n"	# output $max matches
@@ -86,9 +76,7 @@ function search {	# This function search on youtube using API v.2.0. Require "js
 	while (( "$__N" > "$max" )); do
 		echo "Please type number smaller than $max: "
 		read __N
-		if [ "$__N" = "$NULL" ]; then
-			exit 0
-		fi
+		[[ "$__N" = "$NULL" ]] && exit 0
 	done
 	if [ "$__N" = "$NULL" ] || [ "$__N" = "0" ]; then
 		exit 0
@@ -130,9 +118,7 @@ function view {
 	while (( "$__N" > "$max" )); do
 		echo "Please type number smaller than $max (0 for exit): "
 		read __N
-		if [ "$__N" = "$NULL" ]; then 
-			exit 0
-		fi
+		[[ "$__N" = "$NULL" ]] && exit 0
 	done
 	if [ "$__N" = "$NULL" ] || [ "$__N" = "0" ]; then
 		exit 0
@@ -245,10 +231,7 @@ do
 	esac
 done
 
-if [ ! -d "$FINISHDIR" ]; then	# check if directory exist
-	echo -e "$FINISHDIR doesn't exists. Create now..."
-	mkdir -p "$FINISHDIR"
-fi
+[[ -d "$FINISHDIR" ]] || mkdir -p "$FINISHDIR"
 
 cd "$DIR"
 URLNUMBER=0
@@ -271,8 +254,6 @@ else
 		fi
 	done
 fi
-if [ "$NOREMOVE" = "FALSE" ]; then
-	rm -rf $DIR
-fi
+[[ "$NOREMOVE" != "FALSE" ]] || rm -rf $DIR
 cd
 exit 0
