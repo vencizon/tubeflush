@@ -1,91 +1,187 @@
 #!/bin/bash
 
 NAME=tubeflush
-VERSION=0.3
+VERSION=development-version
 
 USAGE="$NAME - version $VERSION\n
 \n
-Usage: $NAME [-eV|N|G|L] [-d] [-i] [FILE]\n
+Usage: $NAME [-eV|N|G|L] [-d|-s|-i] [FILE] [-f] [FORMAT] [-r] [-n] [DIRECTORY]\n
 \n
 Options:\n
+-e\t\tSelect the editor:\n
+\t\t\tV - VIM\n
+\t\t\tN - NANO\n
+\t\t\tG - GEDIT\n
+\t\t\tL - LEAFPAD [Default]\n
 \n
--e\t\tSelect the editor\n
-\t\tV - VIM\n
-\t\tN - NANO\n
-\t\tG - GEDIT\n
-\t\tL - LEAFPAD\n
+-d\t\tInsert URLs to download in a new created file;\n
+-s\t\tSearch on YouTube;\n
+-v\t\tView video result in streaming;\n
+-m\t\tStreaming audio (no video);\n
+-i\t\tInput [FILE];\n
+-f\t\tFormat:\n
+\t\t\taac\n
+\t\t\tvorbis\n
+\t\t\tmp3 [Default]\n
+\t\t\tm4a\n
+\t\t\topus\n
+\t\t\twav\n
 \n
--d\t\tInsert URLs to download in a new created file\n
+-n\t\tdirectory where you want to save output file;\n
+-r\t\tdon't remove temporary files;\n
+-h\t\tprint this help and exit.
 \n
--i\t\tInput [FILE]\n"
+"
+FINISHDIR="$(pwd)"			# set finishdir in the directory where tubeflush is launched
+DIR="/tmp/tubeflush-$USER"	# Working directory
+FORMAT=mp3					# set default output format
+EDITOR=leafpad				# set default text editor
 
-EDITOR=leafpad
+[[ $# -eq 0 ]] && echo -e $USAGE && exit 1					# if there are not arguments on command line
+[[ -d "$DIR" ]] || rm -rf "$DIR" && mkdir -p "$DIR"			# create working directory if it doesn't exist.
 
-if [ $# -lt 1  ];then
-	echo -e $USAGE
-	exit 1
-fi
+## FUNCTION ##
+function search {	# This function search on youtube using API v.2.0. Require "jshon" and "curl".
+	SEARCH1="https://gdata.youtube.com/feeds/api/videos?q="
+	max=10  # Max is 10, if $total will be lighter than 20, max = $total, else max remains 10. Max represent the number of video that tubeflush print
+	for (( i = 1; i <= "$max"; i++ )); do
+		SEARCH2="&orderby=published&start-index="$i"&max-results=1&v=2&alt=json"
+		rpc="$(curl -s "$SEARCH1""$1""$SEARCH2")"	
+		[[ "$rpc" = "$NULL" ]] && echo ":::404 Not Found." && exit 					# if rpc is void, your pc is off line. Turn on yout modem :P
+		total="$(echo $rpc | jshon -e feed -e 'openSearch$totalResults' -e '$t')"	# total il the number of matches
+		[[ $total -eq 0 ]] && echo " No matches found on Youtube..." && exit 1		# if total is 0, it means that on yt there aren't matches
+		title[i]="$(echo $rpc | jshon -e feed -e entry -a -e title -e '$t' -u )"								# video title
+		link[i]="$(echo $rpc | jshon -e feed -e entry -a  -e id -e '$t' -u )"									# video ID
+		desc[i]="$(echo $rpc | jshon -e feed -e entry -a -e 'media$group' -e 'media$description' -e '$t' -u )"	# video description  
+		[[ $total -gt 20 ]] || max=$total											# if there are less than 20 matches, max = $total
+		done	
+	for (( i = 1; i <= "$max"; i++ )); do
+		echo -e "$i) \e[0;0m \033[1m ${title[i]}\n	\e[0;0m${desc[i]} \n"	# output $max matches
+	done
+	read -p "::Select number (0 for exit):" __N								# select $__N
+	if [ "$__N" = "0" ] || [ "$__N" = "$NULL" ]; then exit 0; fi			# if __N = 0 or __N doesn't exists exit 0
+	while [ "$__N" -gt "$max" ]; do											# While cicle because __N type by user is bigger than $max
+		read -p "Please type number smaller than $max: " __N				# Invite user to re-type __N
+		if [ "$__N" = "0" ] || [ "$__N" = "$NULL" ]; then exit 0; fi		# if __N = 0 or __N doesn't exists exit 0
+	done
+	echo "::Download of: ${title[__N]}"
+	id="$(echo ${link[__N]} | rev | cut -d: -f1 | rev)"			# clean video ID
+	echo https://www.youtube.com/watch?v="$id" >> "$DIR"/list	# NOW, "$DIR"/list in $FILE
+}
 
-while getopts ":e:i :d" opt
+function view {		# This function search on youtube using API v.2.0. Require "jshon" and "curl".
+	SEARCH1="https://gdata.youtube.com/feeds/api/videos?q="
+	max=10  # Max is 10, if $total will be lighter than 20, max = $total, else max remains 10. Max represent the number of video that tubeflush print
+	for (( i = 1; i <= "$max"; i++ )); do
+		SEARCH2="&orderby=published&start-index="$i"&max-results=1&v=2&alt=json"
+		rpc="$(curl -s "$SEARCH1""$1""$SEARCH2")"	
+		[[ "$rpc" = "$NULL" ]] && echo " 404 Not Found." && exit 1						# il rpc is empty, exit 1 (no connection)
+		total="$(echo $rpc | jshon -e feed -e 'openSearch$totalResults' -e '$t')"		# total il the number of matches
+		[[ $total -eq 0 ]] && echo ":: No matches found on Youtube..." && exit 1		# if total is 0, it means that on yt there aren't matches
+		echo " No matches found on Youtube..."				  
+		title[i]="$(echo $rpc | jshon -e feed -e entry -a -e title -e '$t' -u )"								# video title
+		link[i]="$(echo $rpc | jshon -e feed -e entry -a  -e id -e '$t' -u )"									# video ID
+		desc[i]="$(echo $rpc | jshon -e feed -e entry -a -e 'media$group' -e 'media$description' -e '$t' -u )"	# video description  
+		[[ "$total" -gt "20" ]] || max=$total											# if there are less than 20 matches, max = $total
+		done	
+	for (( i = 1; i <= "$max"; i++ )); do
+		echo -e "$i) \e[0;0m \033[1m ${title[i]}\n	\e[0;0m${desc[i]} \n"	# output all matches
+	done
+	read -p "::Select number (0 for exit):" __N								# select $__N
+	if [ "$__N" = "0" ] || [ "$__N" = "$NULL" ]; then exit 0; fi			# if __N = 0 or __N doesn't exists exit 0
+	while [ "$__N" -gt "$max" ]; do											# While cicle because __N type by user is bigger than $max
+		read -p "Please type number smaller than $max: " __N				# Invite user to re-type __N
+		if [ "$__N" = "0" ] || [ "$__N" = "$NULL" ]; then exit 0; fi		# if __N = 0 or __N doesn't exists exit 0
+	done
+	echo "::Download of: ${title[__N]}"
+	id="$(echo ${link[__N]} | rev | cut -d: -f1 | rev)"						# clean video ID
+	video="https://www.youtube.com/watch?v="$id""							# $video contain video url
+	mplayer $video $2 >/dev/null 2>&1
+	exit 0
+}
+## END FUNCTION ##
+
+while getopts "e:i: d f: r n:s:v:h: m:" opt	# Parsing command line
 do
 	case "$opt" in
 		"e")
-			#inserire controllo numero parametri (come -i)
-			case "$OPTARG" in
-				"V")
-					EDITOR=vim
-					;;
-				"N")
-					EDITOR=nano
-					;;
-				"G")
-					EDITOR=gedit
-					;;
-				"L")
-					EDITOR=leafpad
-					;;
-				*)
-					echo -e "\tERROR"
-					echo -e $USAGE
-					exit 1
-					;;
-			esac
+			if [ "${#OPTARG}" != "1" ]; then	# ${#OPTARG} is the number of optarg.
+				echo "You can choose only one text editor." #+ if there is not only one argument on switch -e
+				echo 										#+ exit with error because user can uso only one text editor
+				echo -e $USAGE
+				exit 1
+			else
+				case "$OPTARG" in		# set text editor. if -e doesn't exist, Leafpad is default.
+					'V'|'v')
+						EDITOR=vim
+						;;
+					'N'|'n')
+						EDITOR=nano
+						;;
+					'G'|'g')
+						EDITOR=gedit
+						;;
+					'L'|'l')
+						EDITOR=leafpad
+						;;
+					*)
+						echo -e "\tERROR" 
+						echo -e $USAGE
+						exit 1
+						;;
+				esac
+			fi
 			;;
-			
+		"n")					# set a finish directory != pwd
+			FINISHDIR=$OPTARG
+			;;
+		"v")
+			view $OPTARG	# $OPTARG is the string that user want to search on Youtube
+			;;
+		"m")
+			view $OPTARG --novideo # no video from youtube, only music...
+			;;
 		"i")
 			if [ $# -lt 2 ];then
 				echo "error arguments"
 				echo -e $USAGE
 				exit 1
-			elif [ $# -eq 2 ];then
+			elif [ $# -gt 2 ];then
 				if [ "$1" == "-i" ];then
 				       if [ "${2:0:1}" != "-" ];then
-					       FILE=$2
+					       cp "$2" "$DIR"/input_file_for_download
+					       FILE="$DIR"/input_file_for_download
 				       else
-					       echo -e "\tERROR"
-					       echo -e $USAGE
-					       exit 1
+					       echo -e "\tERROR\n\n$USAGE" && exit 1
 				       fi
 				fi
 			else
-				echo -e "\tERROR"
-				echo -e $USAGE
-				exit 1
+				echo -e "\tERROR\n\n$USAGE" && exit 1
 			fi
 			;;
 			
 		"d")
-			FILE=input_file_for_download
+			FILE="$DIR"/input_file_for_download
 			touch $FILE
 			$EDITOR $FILE
-			I=TRUE
 			;;
-			
+		"f")
+			FORMAT=$OPTARG
+			;;
+		"r")	
+			NOREMOVE=TRUE
+			;;
+		"s")
+			search $OPTARG
+			FILE="$DIR"/list
+			;;
+		"h")
+			echo -e $USAGE
+			exit 0
+			;;
 		":")
-			echo "nessun argomento"
-			exit 1
+			echo -e "No argument.\n\n $USAGE" && exit 1
 			;;
-			
 		"?")
 			echo -e "\tERROR"
 			echo -e $USAGE
@@ -99,24 +195,24 @@ do
 	esac
 done
 
-i=0
+[[ -d "$FINISHDIR" ]] || mkdir -p "$FINISHDIR" # create $finishdir if not exists
 
+cd "$DIR"
+URLNUMBER=0		# number of url parsed in $FILE (inizialized to 0)
 for URL in `cat $FILE`; do
-	LIST[$(( i++ ))]=$URL
+	((URLNUMBER++))			# $URLNUMBER increment
+	LIST[$URLNUMBER]=$URL	# LIST[i] is an array that contains all link found in $FILE
 done
-
-while [ $(( i-- )) -gt 2 ]; do
-	youtube-dl ${LIST[i]} -l --extract-audio --audio-format mp3 &
+[[ $URLNUMBER -eq 0 ]] && echo "No link found..." && echo -e $USAGE && exit 1
+for (( i = 1; i<= "$URLNUMBER"; i++ )); do
+	youtube-dl "${LIST[i]}" --title --continue --no-overwrites --extract-audio --audio-format $FORMAT || exit 1
+	if [ "$FORMAT" = "vorbis" ]; then
+		mv "$DIR"/*.ogg "$FINISHDIR"/ || exit 1
+	else
+		mv "$DIR"/*."$FORMAT" "$FINISHDIR" || exit 1
+	fi
 done
-
-if [ $i -gt 0 ]; then
-	youtube-dl ${LIST[$(( i-- ))]} -l --extract-audio --audio-format mp3
 fi
-
-youtube-dl ${LIST[i]} -l --extract-audio --audio-format mp3
-
-if [ "$I" = "TRUE" ]; then
-	rm $FILE
-fi
-
+[[ "$NOREMOVE" ]] || rm -rf $DIR	
+cd
 exit 0
